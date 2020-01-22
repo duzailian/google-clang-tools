@@ -8,12 +8,6 @@ class PartObject {
 ./stack_allocated.h:24:5: warning: [blink-gc] The stack allocated class 'StackObject' provides an unnecessary trace method:
     void Trace(Visitor* visitor) { visitor->Trace(m_obj); }
     ^
-./stack_allocated.h:20:1: warning: [blink-gc] Class 'StackObject' contains invalid fields.
-class StackObject {
-^
-./stack_allocated.h:27:5: warning: [blink-gc] Member field 'm_obj' in stack allocated class declared here (use raw pointer or reference instead):
-    Member<HeapObject> m_obj; // Can't be Member.
-    ^
 ./stack_allocated.h:30:1: warning: [blink-gc] Class 'HeapObject' contains invalid fields.
 class HeapObject : public GarbageCollected<HeapObject> {
 ^
@@ -32,4 +26,10 @@ class DerivedHeapObject2 : public HeapObject {
 ./heap/stubs.h:182:5: note: expanded from macro 'STACK_ALLOCATED'
     __attribute__((annotate("blink_stack_allocated")))      \
     ^
-8 warnings generated.
+stack_allocated.cpp:12:1: warning: [blink-gc] Class 'AnonStackObject' contains invalid fields.
+class AnonStackObject : public StackObject {
+^
+stack_allocated.cpp:14:5: note: [blink-gc] Raw pointer field 'm_obj' to a GC managed class declared here:
+    HeapObject* m_obj;
+    ^
+7 warnings generated.

@@ -23,7 +23,8 @@ private:
 class StackObject {
     STACK_ALLOCATED();
 private:
-    HeapObject* m_obj; // OK
+    Member<HeapObject> m_obj; // OK
+    Member<OffHeapObject> m_memberOff; // NOT OK
     HeapVector<Member<OffHeapObject>> m_heapVectorMemberOff; // NOT OK
 };
 

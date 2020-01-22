@@ -30,7 +30,6 @@ class CheckFieldsVisitor : public RecursiveEdgeVisitor {
     kPtrFromHeapToStack,
     kGCDerivedPartObject,
     kIteratorToGCManaged,
-    kMemberInStackAllocated,
   };
 
   using Errors = std::vector<std::pair<FieldPoint*, Error>>;
