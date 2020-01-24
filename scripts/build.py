@@ -338,6 +338,15 @@ def main():
                       default=sys.platform in ('linux2', 'darwin'))
   args = parser.parse_args()
 
+  # TODO(crbug.com/1042192): Remove in the next Clang roll.
+  if args.llvm_force_head_revision:
+    global RELEASE_VERSION
+    RELEASE_VERSION = '11.0.0'
+    old_lib_dir = os.path.join(LLVM_BUILD_DIR, 'lib', 'clang', '10.0.0')
+    if (os.path.isdir(old_lib_dir)):
+      print('Removing old lib dir: ' + old_lib_dir)
+      RmTree(old_lib_dir)
+
   if args.lto_lld and not args.bootstrap:
     print('--lto-lld requires --bootstrap')
     return 1
@@ -451,8 +460,6 @@ def main():
                      '-DCOMPILER_RT_USE_LIBCXX=NO',
                      # Don't run Go bindings tests; PGO makes them confused.
                      '-DLLVM_INCLUDE_GO_TESTS=OFF',
-                     # TODO(b/148147812) Goma client doesn't handle in-process cc1.
-                     '-DCLANG_SPAWN_CC1=ON',
                      ]
 
   if args.gcc_toolchain:
