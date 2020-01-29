@@ -140,8 +140,7 @@ bool RecordInfo::IsGCDirectlyDerived() {
     if (!base)
       continue;
 
-    const std::string& name = base->getName();
-    if (Config::IsGCSimpleBase(name)) {
+    if (Config::IsGCSimpleBase(base->getName())) {
       directly_derived_gc_base_ = &it;
       break;
     }
