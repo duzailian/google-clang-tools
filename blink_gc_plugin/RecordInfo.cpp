@@ -183,9 +183,9 @@ void RecordInfo::walkBases() {
       if (!base)
         continue;
 
-      const std::string& name = base->getName();
+      llvm::StringRef name = base->getName();
       if (Config::IsGCBase(name)) {
-        gc_base_names_.push_back(name);
+        gc_base_names_.push_back(std::string(name));
         is_gc_derived_ = true;
       }
     }
