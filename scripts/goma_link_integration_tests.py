@@ -3,29 +3,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Unit tests for goma_link.
+# Integration tests for goma_link.
 #
 # Usage:
 #
 # Ensure that gomacc, llvm-objdump, and llvm-dwarfdump are in your PATH.
 # Then run:
 #
-# python third_party/pycoverage run tools/clang/scripts/goma_link_tests.py
+#   tools/clang/scripts/goma_link_integration_tests.py
 #
-# An HTML coverage report can be generated afterwards by running:
-# python third_party/pycoverage html
-#
-# The report will be available as htmlcov/index.html
+# See also goma_link_unit_tests.py, which contains unit tests and
+# instructions for generating coverage information.
 
 import goma_ld
 import goma_link
 
 import os
 import re
-import shutil
 import subprocess
-import tempfile
 import unittest
+
+from goma_link_test_utils import named_directory, working_directory
 
 # Path constants.
 CHROMIUM_DIR = os.path.abspath(
@@ -45,36 +43,6 @@ def _create_inputs(path):
     f.write('int foo() {\n  return 12;\n}\n')
   with open(os.path.join(path, 'bar.cpp'), 'w') as f:
     f.write('int bar() {\n  return 9;\n}\n')
-
-
-# tempfile.NamedDirectory is in Python 3.8. This is for compatibility with
-# older Python versions.
-class NamedDirectory(object):
-  def __init__(self, *args, **kwargs):
-    self.name = tempfile.mkdtemp(*args, **kwargs)
-
-  def __enter__(self):
-    return self.name
-
-  def __exit__(self, exnty, *args, **kwargs):
-    shutil.rmtree(self.name)
-    return exnty is None
-
-
-# Changes working directory to the specified directory, runs enclosed code,
-# and changes back to the previous directory.
-class WorkingDirectory(object):
-  def __init__(self, newcwd):
-    self.oldcwd = os.getcwd()
-    os.chdir(newcwd)
-    self.newcwd = os.getcwd()
-
-  def __enter__(self):
-    return self.newcwd
-
-  def __exit__(self, exnty, *args, **kwargs):
-    os.chdir(self.oldcwd)
-    return exnty is None
 
 
 class GomaLinkUnixWhitelistMain(goma_ld.GomaLinkUnix):
@@ -97,37 +65,6 @@ class GomaLinkWindowsWhitelistMain(goma_link.GomaLinkWindows):
     self.WHITELISTED_TARGETS = {'main.exe'}
 
 
-class GomaLinkUnitTest(unittest.TestCase):
-  """
-  Unit tests for goma_link.
-  """
-
-  def test_ensure_file_no_dir(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
-      self.assertFalse(os.path.exists('test'))
-      goma_link.ensure_file('test')
-      self.assertTrue(os.path.exists('test'))
-
-  def test_ensure_file_existing(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
-      self.assertFalse(os.path.exists('foo/test'))
-      goma_link.ensure_file('foo/test')
-      self.assertTrue(os.path.exists('foo/test'))
-      os.utime('foo/test', (0, 0))
-      statresult = os.stat('foo/test')
-      goma_link.ensure_file('foo/test')
-      self.assertTrue(os.path.exists('foo/test'))
-      newstatresult = os.stat('foo/test')
-      self.assertEqual(newstatresult.st_mtime, statresult.st_mtime)
-
-  def test_ensure_file_error(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
-      self.assertFalse(os.path.exists('test'))
-      goma_link.ensure_file('test')
-      self.assertTrue(os.path.exists('test'))
-      self.assertRaises(OSError, goma_link.ensure_file, 'test/impossible')
-
-
 class GomaLinkIntegrationTest(unittest.TestCase):
   def clangcl(self):
     return os.path.join(LLVM_BIN_DIR, 'clang-cl' + goma_link.exe_suffix())
@@ -136,7 +73,7 @@ class GomaLinkIntegrationTest(unittest.TestCase):
     return os.path.join(LLVM_BIN_DIR, 'lld-link' + goma_link.exe_suffix())
 
   def test_distributed_lto_common_objs(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       os.makedirs('obj')
       subprocess.check_call([
@@ -187,7 +124,7 @@ class GomaLinkIntegrationTest(unittest.TestCase):
       self.assertTrue(b'call' in disasm or b'jmp' in disasm)
 
   def test_distributed_lto_whitelisted(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       os.makedirs('obj')
       subprocess.check_call([
@@ -245,7 +182,7 @@ class GomaLdIntegrationTest(unittest.TestCase):
     return os.path.join(LLVM_BIN_DIR, 'clang++' + goma_link.exe_suffix())
 
   def test_nonlto(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       subprocess.check_call(
           [self.clangxx(), '-c', '-Os', 'main.cpp', '-o', 'main.o'])
@@ -267,7 +204,7 @@ class GomaLdIntegrationTest(unittest.TestCase):
       self.assertIn(b'foo', main_disasm)
 
   def test_fallback_lto(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       subprocess.check_call([
           self.clangxx(), '-c', '-Os', '-flto=thin', 'main.cpp', '-o', 'main.o'
@@ -291,7 +228,7 @@ class GomaLdIntegrationTest(unittest.TestCase):
       self.assertNotIn(b'foo', main_disasm)
 
   def test_distributed_lto(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       subprocess.check_call([
           self.clangxx(), '-c', '-Os', '-flto=thin', 'main.cpp', '-o', 'main.o'
@@ -319,7 +256,7 @@ class GomaLdIntegrationTest(unittest.TestCase):
       self.assertNotIn(b'foo', main_disasm)
 
   def test_distributed_lto_thin_archive_same_dir(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       subprocess.check_call([
           self.clangxx(), '-c', '-Os', '-flto=thin', 'main.cpp', '-o', 'main.o'
@@ -351,7 +288,7 @@ class GomaLdIntegrationTest(unittest.TestCase):
       self.assertNotIn(b'foo', main_disasm)
 
   def test_distributed_lto_thin_archive_subdir(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       os.makedirs('obj')
       subprocess.check_call([
@@ -389,37 +326,36 @@ class GomaLdIntegrationTest(unittest.TestCase):
       self.assertNotIn(b'foo', main_disasm)
 
   def test_debug_params(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       os.makedirs('obj')
       subprocess.check_call([
-          self.clangxx(), '-c', '-g', '-gsplit-dwarf', '-flto=thin',
-          'main.cpp', '-o', 'obj/main.o',
+          self.clangxx(), '-c', '-g', '-gsplit-dwarf', '-flto=thin', 'main.cpp',
+          '-o', 'obj/main.o'
       ])
       subprocess.check_call([
-          self.clangxx(), '-c', '-g', '-gsplit-dwarf', '-flto=thin',
-          'foo.cpp', '-o', 'obj/foo.o'
+          self.clangxx(), '-c', '-g', '-gsplit-dwarf', '-flto=thin', 'foo.cpp',
+          '-o', 'obj/foo.o'
       ])
       with open('main.rsp', 'w') as f:
-        f.write('obj/main.o\n'
-                'obj/foo.o\n')
+        f.write('obj/main.o\n' 'obj/foo.o\n')
       rc = GomaLinkUnixWhitelistMain().main([
           'goma_ld.py',
-          self.clangxx(), '-fuse-ld=lld', '-flto=thin',
-          '-g', '-gsplit-dwarf', '-Wl,--lto-O2', '-o', 'main', '@main.rsp',
+          self.clangxx(), '-fuse-ld=lld', '-flto=thin', '-g', '-gsplit-dwarf',
+          '-Wl,--lto-O2', '-o', 'main', '@main.rsp'
       ])
       # Should succeed.
       self.assertEqual(rc, 0)
       # Check debug info present, refers to .dwo file, and does not
       # contain full debug info for foo.cpp.
       dbginfo = subprocess.check_output(
-          ['llvm-dwarfdump', '-debug-info', 'main']
-      ).decode('utf-8', 'backslashreplace')
+          ['llvm-dwarfdump', '-debug-info', 'main']).decode(
+              'utf-8', 'backslashreplace')
       self.assertRegexpMatches(dbginfo, '\\bDW_AT_GNU_dwo_name\\b.*\\.dwo"')
       self.assertNotRegexpMatches(dbginfo, '\\bDW_AT_name\\b.*foo\\.cpp"')
 
   def test_distributed_lto_params(self):
-    with NamedDirectory() as d, WorkingDirectory(d):
+    with named_directory() as d, working_directory(d):
       _create_inputs(d)
       os.makedirs('obj')
       subprocess.check_call([
