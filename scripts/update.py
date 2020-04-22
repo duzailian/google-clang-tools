@@ -311,15 +311,15 @@ def UpdatePackage(package_name, host_os):
 
   DownloadAndUnpackPackage(package_file, LLVM_BUILD_DIR, host_os)
 
-  if package_name == 'clang':
-    if host_os == 'win' and sys.platform == 'win32':
-      CopyDiaDllTo(os.path.join(LLVM_BUILD_DIR, 'bin'))
-      # TODO(thakis): Get a DIA DLL when doing Windows cross builds on other
-      # hosts. https://crbug.com/1073298.
-    if 'win' in target_os:
-      # When doing win/cross builds on other hosts, get the Windows runtime
-      # libraries, and llvm-symbolizer.exe (needed in asan builds).
-      DownloadAndUnpackClangWinRuntime(LLVM_BUILD_DIR)
+  if package_name == 'clang' and 'win' in target_os:
+    # When doing win/cross builds on other hosts, get the Windows runtime
+    # libraries, and llvm-symbolizer.exe (needed in asan builds).
+    DownloadAndUnpackClangWinRuntime(LLVM_BUILD_DIR)
+    # Copy DIA dll when targeting Windows independent of the host OS as well,
+    # in case it needs to be copied to swarming.
+    # TODO(https://crbug.com/1073298): It's not clear what this is for,
+    # try removing it.
+    CopyDiaDllTo(os.path.join(LLVM_BUILD_DIR, 'bin'))
 
   WriteStampFile(expected_stamp, stamp_file)
   return 0
