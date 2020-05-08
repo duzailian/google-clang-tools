@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
+
+namespace my_namespace {
+
 class SomeClass {
  public:
   void Method(char) {}
@@ -15,6 +19,46 @@ struct MyStruct {
 
   // Expected rewrite: CheckedPtr<void> void_ptr;
   void* void_ptr;
+
+  // |bool*| used to be rewritten as |CheckedPtr<_Bool>| which doesn't compile:
+  // use of undeclared identifier '_Bool'.
+  //
+  // Expected rewrite: CheckedPtr<bool> bool_ptr;
+  bool* bool_ptr;
+  // Expected rewrite: CheckedPtr<const bool> bool_ptr;
+  const bool* const_bool_ptr;
+
+  // Some types may be spelled in various, alternative ways.  If possible, the
+  // rewriter should preserve the original spelling.
+  //
+  // Spelling of integer types.
+  //
+  // Expected rewrite: CheckedPtr<int> ...
+  int* int_spelling1;
+  // Expected rewrite: CheckedPtr<signed int> ...
+  // TODO(lukasza): Fix?  Today this is rewritten into: CheckedPtr<int> ...
+  signed int* int_spelling2;
+  // Expected rewrite: CheckedPtr<long int> ...
+  // TODO(lukasza): Fix?  Today this is rewritten into: CheckedPtr<long> ...
+  long int* int_spelling3;
+  // Expected rewrite: CheckedPtr<unsigned> ...
+  // TODO(lukasza): Fix?  Today this is rewritten into: CheckedPtr<unsigned int>
+  unsigned* int_spelling4;
+  // Expected rewrite: CheckedPtr<int32_t> ...
+  int32_t* int_spelling5;
+  // Expected rewrite: CheckedPtr<int64_t> ...
+  int64_t* int_spelling6;
+  // Expected rewrite: CheckedPtr<int_fast32_t> ...
+  int_fast32_t* int_spelling7;
+  //
+  // Spelling of structs and classes.
+  //
+  // Expected rewrite: CheckedPtr<SomeClass> ...
+  SomeClass* class_spelling1;
+  // Expected rewrite: CheckedPtr<class SomeClass> ...
+  class SomeClass* class_spelling2;
+  // Expected rewrite: CheckedPtr<my_namespace::SomeClass> ...
+  my_namespace::SomeClass* class_spelling3;
 
   // No rewrite of function pointers expected, because they won't ever be either
   // A) allocated by PartitionAlloc or B) derived from CheckedPtrSupport.  In
@@ -32,13 +76,10 @@ struct MyStruct {
   using SomeClassAlias = SomeClass;
   typedef void (*func_ptr_typedef2)(char);
   // Expected rewrite: CheckedPtr<SomeClassTypedef> ...
-  // TODO(lukasza): No |MyStruct::| qualification expected.
   SomeClassTypedef* typedef_ptr;
   // Expected rewrite: CheckedPtr<SomeClassAlias> ...
-  // TODO(lukasza): No |MyStruct::| qualification expected.
   SomeClassAlias* alias_ptr;
   // Expected rewrite: CheckedPtr<func_ptr_typedef2> ...
-  // TODO(lukasza): No |MyStruct::| qualification expected.
   func_ptr_typedef2* ptr_to_function_ptr;
 
   // Typedefs and type alias definitions should not be rewritten.
@@ -48,3 +89,5 @@ struct MyStruct {
   // No rewrite expected (for now - in V1 we only rewrite field decls).
   using SomeClassPtrAlias = SomeClass*;
 };
+
+}  // namespace my_namespace
