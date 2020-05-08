@@ -171,13 +171,27 @@ int main(int argc, const char* argv[]) {
   MatchFinder match_finder;
   ReplacementsPrinter replacements_printer;
 
+  // Supported pointer types =========
+  // Given
+  //   struct MyStrict {
+  //     int* ptr;
+  //     int i;
+  //     int (*func_ptr)();
+  //     int (MyStruct::* member_func_ptr)(char);
+  //   };
+  // matches |int*|, but not the other types.
+  auto supported_pointer_types_matcher =
+      pointerType(unless(pointee(hasUnqualifiedDesugaredType(
+          anyOf(functionType(), memberPointerType())))));
+
   // Field declarations =========
   // Given
   //   struct S {
   //     int* y;
   //   };
   // matches |int* y|.
-  auto field_decl_matcher = fieldDecl(hasType(pointerType())).bind("fieldDecl");
+  auto field_decl_matcher =
+      fieldDecl(hasType(supported_pointer_types_matcher)).bind("fieldDecl");
   FieldDeclRewriter field_decl_rewriter(&replacements_printer);
   match_finder.addMatcher(field_decl_matcher, &field_decl_rewriter);
 
