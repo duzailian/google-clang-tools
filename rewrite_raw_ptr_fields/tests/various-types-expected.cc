@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "base/memory/checked_ptr.h"
 
@@ -14,7 +15,16 @@ class SomeClass {
   int data_member;
 };
 
+// The class below deletes the |operator new| - this simulate's Blink's
+// STACK_ALLOCATED macro and/or OilPan / GarbageCollected<T> classes.
+class NoNewOperator {
+  void* operator new(size_t) = delete;
+};
+
 struct MyStruct {
+  // No rewrite expected for classes with no |operator new|.
+  NoNewOperator* no_new_ptr;
+
   // Expected rewrite: CheckedPtr<CheckedPtr<SomeClass>> double_ptr;
   // TODO(lukasza): Handle recursion/nesting.
   CheckedPtr<SomeClass*> double_ptr;
