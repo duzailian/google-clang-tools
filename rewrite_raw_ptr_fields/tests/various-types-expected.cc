@@ -115,6 +115,20 @@ struct MyStruct {
   const char* const_char_ptr;
   wchar_t* wide_char_ptr;
   const wchar_t* const_wide_char_ptr;
+
+  // |array_of_ptrs| is an array 123 of pointer to SomeClass.
+  // No rewrite expected (this is not a pointer - this is an array).
+  SomeClass* ptr_array[123];
+
+  // |ptr_to_array| is a pointer to array 123 of const SomeClass.
+  //
+  // This test is based on EqualsFramesMatcher from
+  // //net/websockets/websocket_channel_test.cc
+  //
+  // No rewrite expected (this *is* a pointer, but generating a correct
+  // replacement is tricky, because the |replacement_range| needs to cover
+  // "[123]" that comes *after* the field name).
+  const SomeClass (*ptr_to_array)[123];
 };
 
 }  // namespace my_namespace

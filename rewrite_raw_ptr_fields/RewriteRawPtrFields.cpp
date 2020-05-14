@@ -188,17 +188,17 @@ int main(int argc, const char* argv[]) {
   //     char* char_ptr;
   //     int (*func_ptr)();
   //     int (MyStruct::* member_func_ptr)(char);
+  //     int (*ptr_to_array_of_ints)[123]
   //     StructOrClassWithDeletedOperatorNew* stack_or_gc_ptr;
   //   };
   // matches |int*|, but not the other types.
-  auto function_pointer_type_matcher =
-      hasUnqualifiedDesugaredType(anyOf(functionType(), memberPointerType()));
   auto record_with_deleted_allocation_operator_type_matcher =
       recordType(hasDeclaration(cxxRecordDecl(
           hasMethod(allOf(hasOverloadedOperatorName("new"), isDeleted())))));
-  auto supported_pointer_types_matcher = pointerType(unless(pointee(anyOf(
-      function_pointer_type_matcher,
-      record_with_deleted_allocation_operator_type_matcher, anyCharType()))));
+  auto supported_pointer_types_matcher =
+      pointerType(unless(pointee(hasUnqualifiedDesugaredType(anyOf(
+          record_with_deleted_allocation_operator_type_matcher, functionType(),
+          memberPointerType(), anyCharType(), arrayType())))));
 
   // Implicit field declarations =========
   // Matches field declarations that do not explicitly appear in the source
