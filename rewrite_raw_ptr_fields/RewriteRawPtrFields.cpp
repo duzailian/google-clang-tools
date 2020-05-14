@@ -83,6 +83,10 @@ AST_MATCHER(clang::ClassTemplateSpecializationDecl, isImplicitSpecialization) {
   return !Node.isExplicitSpecialization();
 }
 
+AST_MATCHER(clang::Type, anyCharType) {
+  return Node.isAnyCharacterType();
+}
+
 class FieldDeclRewriter : public MatchFinder::MatchCallback {
  public:
   explicit FieldDeclRewriter(ReplacementsPrinter* replacements_printer)
@@ -179,8 +183,9 @@ int main(int argc, const char* argv[]) {
   // Supported pointer types =========
   // Given
   //   struct MyStrict {
-  //     int* ptr;
+  //     int* int_ptr;
   //     int i;
+  //     char* char_ptr;
   //     int (*func_ptr)();
   //     int (MyStruct::* member_func_ptr)(char);
   //     StructOrClassWithDeletedOperatorNew* stack_or_gc_ptr;
@@ -191,9 +196,9 @@ int main(int argc, const char* argv[]) {
   auto record_with_deleted_allocation_operator_type_matcher =
       recordType(hasDeclaration(cxxRecordDecl(
           hasMethod(allOf(hasOverloadedOperatorName("new"), isDeleted())))));
-  auto supported_pointer_types_matcher = pointerType(unless(
-      pointee(anyOf(function_pointer_type_matcher,
-                    record_with_deleted_allocation_operator_type_matcher))));
+  auto supported_pointer_types_matcher = pointerType(unless(pointee(anyOf(
+      function_pointer_type_matcher,
+      record_with_deleted_allocation_operator_type_matcher, anyCharType()))));
 
   // Implicit field declarations =========
   // Matches field declarations that do not explicitly appear in the source

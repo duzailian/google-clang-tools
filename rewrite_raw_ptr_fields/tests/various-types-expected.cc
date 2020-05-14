@@ -100,6 +100,21 @@ struct MyStruct {
   typedef SomeClass* SomeClassPtrTypedef;
   // No rewrite expected (for now - in V1 we only rewrite field decls).
   using SomeClassPtrAlias = SomeClass*;
+
+  // Chromium is built with a warning/error that there are no user-defined
+  // constructors invoked when initializing global-scoped values.
+  // CheckedPtr<char> conversion might trigger a global constructor for string
+  // literals:
+  //     struct MyStruct {
+  //       int foo;
+  //       CheckedPtr<const char> bar;
+  //     }
+  //     MyStruct g_foo = {123, "string literal" /* global constr! */};
+  // Because of the above, no rewrite is expected below.
+  char* char_ptr;
+  const char* const_char_ptr;
+  wchar_t* wide_char_ptr;
+  const wchar_t* const_wide_char_ptr;
 };
 
 }  // namespace my_namespace
