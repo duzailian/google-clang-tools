@@ -62,6 +62,8 @@ class ReplacementsPrinter {
         source_manager, clang::CharSourceRange::getCharRange(replacement_range),
         replacement_text);
     llvm::StringRef file_path = replacement.getFilePath();
+    assert(!file_path.empty());
+
     std::replace(replacement_text.begin(), replacement_text.end(), '\n', '\0');
     llvm::outs() << "r:::" << file_path << ":::" << replacement.getOffset()
                  << ":::" << replacement.getLength()
@@ -125,6 +127,13 @@ AST_MATCHER(clang::ClassTemplateSpecializationDecl, isImplicitSpecialization) {
 
 AST_MATCHER(clang::Type, anyCharType) {
   return Node.isAnyCharacterType();
+}
+
+AST_POLYMORPHIC_MATCHER(isInMacroLocation,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(clang::Decl,
+                                                        clang::Stmt,
+                                                        clang::TypeLoc)) {
+  return Node.getBeginLoc().isMacroID();
 }
 
 // Matcher for FieldDecl that has a TypeLoc with a unique start location
@@ -294,10 +303,10 @@ int main(int argc, const char* argv[]) {
   // - non-pointer types
   // - fields of lambda-supporting classes
   auto field_decl_matcher =
-      fieldDecl(allOf(hasType(supported_pointer_types_matcher),
-                      hasUniqueTypeLoc(),
-                      unless(anyOf(isInThirdPartyLocation(),
-                                   implicit_field_decl_matcher))))
+      fieldDecl(
+          allOf(hasType(supported_pointer_types_matcher), hasUniqueTypeLoc(),
+                unless(anyOf(isInThirdPartyLocation(), isInMacroLocation(),
+                             implicit_field_decl_matcher))))
           .bind("fieldDecl");
   FieldDeclRewriter field_decl_rewriter(&replacements_printer);
   match_finder.addMatcher(field_decl_matcher, &field_decl_rewriter);
