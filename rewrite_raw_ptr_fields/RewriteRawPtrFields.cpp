@@ -502,8 +502,19 @@ int main(int argc, const char* argv[]) {
   auto affected_printf_arg_matcher =
       expr(allOf(affected_implicit_expr_matcher,
                  hasParent(callExpr(callee(functionDecl(isVariadic()))))));
-  AffectedExprRewriter printf_arg_rewriter(&replacements_printer);
-  match_finder.addMatcher(affected_printf_arg_matcher, &printf_arg_rewriter);
+  AffectedExprRewriter affected_expr_rewriter(&replacements_printer);
+  match_finder.addMatcher(affected_printf_arg_matcher, &affected_expr_rewriter);
+
+  // some_cast<...>(expr) =========
+  // Given
+  //   const_cast<...>(s.y)
+  //   reinterpret_cast<...>(s.y)
+  // matches the |s.y| expr if it matches the |affected_implicit_expr_matcher|
+  // above.
+  auto affected_cast_arg_matcher = expr(allOf(
+      affected_implicit_expr_matcher,
+      hasParent(expr(anyOf(cxxConstCastExpr(), cxxReinterpretCastExpr())))));
+  match_finder.addMatcher(affected_cast_arg_matcher, &affected_expr_rewriter);
 
   // Prepare and run the tool.
   std::unique_ptr<clang::tooling::FrontendActionFactory> factory =
