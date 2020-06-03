@@ -67,3 +67,31 @@ void foo() {
 }
 
 }  // namespace cast_tests
+
+namespace ternary_operator_tests {
+
+void foo(int x) {
+  MyStruct my_struct;
+  SomeClass* other_ptr = nullptr;
+
+  // To avoid the following error type:
+  //     conditional expression is ambiguous; 'const CheckedPtr<SomeClass>'
+  //     can be converted to 'SomeClass *' and vice versa
+  // we need to append |.get()| to |my_struct.ptr| below.
+  //
+  // Expected rewrite: ... my_struct.ptr.get() ...
+  SomeClass* v = (x > 123) ? my_struct.ptr : other_ptr;
+
+  // Rewrite in the other position.
+  // Expected rewrite: ... my_struct.ptr.get() ...
+  SomeClass* v2 = (x > 456) ? other_ptr : my_struct.ptr;
+
+  // No rewrite is needed for the first, conditional argument.
+  // No rewrite expected.
+  int v3 = my_struct.ptr ? 123 : 456;
+
+  // Test for 1st and 2nd arg.  Only 2nd arg should be rewritten.
+  SomeClass* v4 = my_struct.ptr ? my_struct.ptr : other_ptr;
+}
+
+}  // namespace ternary_operator_tests

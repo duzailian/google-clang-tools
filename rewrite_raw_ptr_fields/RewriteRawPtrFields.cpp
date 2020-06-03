@@ -482,6 +482,13 @@ int main(int argc, const char* argv[]) {
 
   // Matches expressions that used to return a value of type |SomeClass*|
   // but after the rewrite return an instance of |CheckedPtr<SomeClass>|.
+  // Many such expressions might need additional changes after the rewrite:
+  // - Some expressions (printf args, const_cast args, etc.) might need |.get()|
+  //   appended.
+  // - Using such expressions in specific contexts (e.g. as in-out arguments or
+  //   as a return value of a function returning references) may require
+  //   additional work and should cause related fields to be emitted as
+  //   candidates for the --field-filter-file parameter.
   auto affected_member_expr_matcher =
       memberExpr(member(field_decl_matcher)).bind("affectedMemberExpr");
   auto affected_implicit_expr_matcher = implicitCastExpr(has(expr(anyOf(
@@ -491,30 +498,36 @@ int main(int argc, const char* argv[]) {
       // 2nd nested implicitCastExpr is present in case of:
       // |const auto* v = s.ptr_field;|
       expr(implicitCastExpr(has(affected_member_expr_matcher)))))));
+  auto affected_expr_matcher =
+      expr(anyOf(affected_member_expr_matcher, affected_implicit_expr_matcher));
 
-  // Printf-style call expr =========
+  // Places where |.get()| needs to be appended =========
   // Given
   //   void foo(const S& s) {
   //     printf("%p", s.y);
+  //     const_cast<...>(s.y)
+  //     reinterpret_cast<...>(s.y)
   //   }
-  // matches the |s.y| expr if it matches the |affected_implicit_expr_matcher|
-  // above.
-  auto affected_printf_arg_matcher =
-      expr(allOf(affected_implicit_expr_matcher,
-                 hasParent(callExpr(callee(functionDecl(isVariadic()))))));
+  // matches the |s.y| expr if it matches the |affected_expr_matcher| above.
+  auto affected_expr_that_needs_fixing_matcher = expr(allOf(
+      affected_expr_matcher,
+      hasParent(expr(anyOf(callExpr(callee(functionDecl(isVariadic()))),
+                           cxxConstCastExpr(), cxxReinterpretCastExpr())))));
   AffectedExprRewriter affected_expr_rewriter(&replacements_printer);
-  match_finder.addMatcher(affected_printf_arg_matcher, &affected_expr_rewriter);
+  match_finder.addMatcher(affected_expr_that_needs_fixing_matcher,
+                          &affected_expr_rewriter);
 
-  // some_cast<...>(expr) =========
+  // Affected ternary operator args =========
   // Given
-  //   const_cast<...>(s.y)
-  //   reinterpret_cast<...>(s.y)
-  // matches the |s.y| expr if it matches the |affected_implicit_expr_matcher|
-  // above.
-  auto affected_cast_arg_matcher = expr(allOf(
-      affected_implicit_expr_matcher,
-      hasParent(expr(anyOf(cxxConstCastExpr(), cxxReinterpretCastExpr())))));
-  match_finder.addMatcher(affected_cast_arg_matcher, &affected_expr_rewriter);
+  //   void foo(const S& s) {
+  //     cond ? s.y : ...
+  //   }
+  // binds the |s.y| expr if it matches the |affected_expr_matcher| above.
+  auto affected_ternary_operator_arg_matcher =
+      conditionalOperator(eachOf(hasTrueExpression(affected_expr_matcher),
+                                 hasFalseExpression(affected_expr_matcher)));
+  match_finder.addMatcher(affected_ternary_operator_arg_matcher,
+                          &affected_expr_rewriter);
 
   // Prepare and run the tool.
   std::unique_ptr<clang::tooling::FrontendActionFactory> factory =
