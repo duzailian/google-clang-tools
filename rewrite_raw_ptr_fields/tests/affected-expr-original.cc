@@ -11,7 +11,78 @@ struct MyStruct {
   SomeClass* ptr;
   SomeClass* ptr2;
   const SomeClass* const_ptr;
+  int (*func_ptr_field)();
 };
+
+namespace auto_tests {
+
+MyStruct* GetMyStruct() {
+  return nullptr;
+}
+
+SomeClass* GetSomeClass() {
+  return nullptr;
+}
+
+SomeClass* ConvertSomeClassToSomeClass(SomeClass* some_class) {
+  return some_class;
+}
+
+void foo() {
+  MyStruct my_struct;
+
+  // After the rewrite |my_struct.ptr_field| is no longer a pointer,
+  // so |auto*| won't work.  We fix this up, by appending |.get()|.
+  // Expected rewrite: auto* ptr_var = my_struct.ptr.get();
+  auto* ptr_var = my_struct.ptr;
+
+  // Tests for other kinds of initialization.
+  // Expected rewrite: |.get()| should be appended in both cases below.
+  auto* init_test1(my_struct.ptr);
+  auto* init_test2{my_struct.ptr};
+
+  // Test for handling of the |const| qualifier.
+  // Expected rewrite: const auto* ptr_var = my_struct.ptr.get();
+  const auto* const_ptr_var = my_struct.ptr;
+
+  // More complicated initialization expression, but the |ptr_field| struct
+  // member dereference is still the top/last expression here.
+  // Expected rewrite: ...->ptr.get()
+  auto* complicated_var = GetMyStruct()->ptr;
+
+  // The test below covers:
+  // 1. Two variables with single |auto|,
+  // 2. Tricky placement of |*| (next to the variable name).
+  // Expected rewrite: ...ptr.get()... (twice in the 2nd example).
+  auto *ptr_var1 = my_struct.ptr, *ptr_var2 = GetSomeClass();
+  auto *ptr_var3 = my_struct.ptr, *ptr_var4 = my_struct.ptr;
+  auto *ptr_var5 = GetSomeClass(), *ptr_var6 = my_struct.ptr;
+
+  // Test for the case where
+  // 1. The resulting type is the same as in the |ptr_var| and |complicated_var|
+  //    examples
+  // 2. Deep in the initialization expression there is a member dereference
+  //    of |ptr_field|
+  // but
+  // 3. The final/top-level initialization expression doesn't dereference
+  //    |ptr_field|.
+  // No rewrite expected.
+  auto* not_affected_field_var = ConvertSomeClassToSomeClass(my_struct.ptr);
+
+  // Test for pointer |auto| assigned from non-CheckedPtr-elligible field.
+  // No rewrite expected.
+  auto* func_ptr_var = my_struct.func_ptr_field;
+
+  // Test for non-pointer |auto| assigned from CheckedPtr-elligible field.
+  // No rewrite expected.
+  auto non_pointer_auto_var = my_struct.ptr;
+
+  // Test for non-auto pointer.
+  // No rewrite expected.
+  SomeClass* non_auto_ptr_var = my_struct.ptr;
+}
+
+}  // namespace auto_tests
 
 namespace printf_tests {
 

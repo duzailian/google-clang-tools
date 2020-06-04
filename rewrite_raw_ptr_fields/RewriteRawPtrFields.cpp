@@ -529,6 +529,20 @@ int main(int argc, const char* argv[]) {
   match_finder.addMatcher(affected_ternary_operator_arg_matcher,
                           &affected_expr_rewriter);
 
+  // |auto| type declarations =========
+  // Given
+  //   struct S { int* y; };
+  //   void foo(const S& s) {
+  //     auto* p = s.y;
+  //   }
+  // binds the |s.y| expr if it matches the |affected_expr_matcher| above.
+  auto auto_var_decl_matcher = declStmt(forEach(varDecl(
+      allOf(hasType(pointerType(pointee(autoType()))),
+            hasInitializer(anyOf(
+                affected_implicit_expr_matcher,
+                initListExpr(hasInit(0, affected_implicit_expr_matcher))))))));
+  match_finder.addMatcher(auto_var_decl_matcher, &affected_expr_rewriter);
+
   // Prepare and run the tool.
   std::unique_ptr<clang::tooling::FrontendActionFactory> factory =
       clang::tooling::newFrontendActionFactory(&match_finder,
