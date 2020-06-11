@@ -800,11 +800,11 @@ int main(int argc, const char* argv[]) {
   //     auto* p = s.y;
   //   }
   // binds the |s.y| expr if it matches the |affected_expr_matcher| above.
-  auto auto_var_decl_matcher = declStmt(forEach(varDecl(
-      allOf(hasType(pointerType(pointee(autoType()))),
-            hasInitializer(anyOf(
-                affected_implicit_expr_matcher,
-                initListExpr(hasInit(0, affected_implicit_expr_matcher))))))));
+  auto auto_var_decl_matcher = declStmt(forEach(
+      varDecl(allOf(hasType(pointerType(pointee(autoType()))),
+                    hasInitializer(anyOf(
+                        affected_expr_matcher,
+                        initListExpr(hasInit(0, affected_expr_matcher))))))));
   match_finder.addMatcher(auto_var_decl_matcher, &affected_expr_rewriter);
 
   // address-of(affected-expr) =========
