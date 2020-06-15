@@ -121,6 +121,9 @@ disk_cache::MappedFile::buffer_
 ui::AXPlatformNodeAuraLinux::document_parent_
 ui::AXPlatformNodeAuraLinux::atk_object_
 
+# Populated manually - these pointers can cause runtime crashes.
+(anonymous namespace)::TlsVectorEntry::data  # can be an invalid pointer with top bits set
+
 # Populated by the rewriter, based on in-out-arg usage:
 AccountFetcherService::token_service_
 AccountStorageAuthHelper::profile_
