@@ -808,8 +808,12 @@ int main(int argc, const char* argv[]) {
                                  unless(referenceType()))))));
   match_finder.addMatcher(callExpr(templated_function_arg_matcher),
                           &affected_expr_rewriter);
-  match_finder.addMatcher(cxxConstructExpr(templated_function_arg_matcher),
-                          &affected_expr_rewriter);
+  // TODO(lukasza): It is unclear why |traverse| below is needed.  Maybe it can
+  // be removed if https://bugs.llvm.org/show_bug.cgi?id=46287 is fixed.
+  match_finder.addMatcher(
+      traverse(clang::ast_type_traits::TK_AsIs,
+               cxxConstructExpr(templated_function_arg_matcher)),
+      &affected_expr_rewriter);
 
   // |auto| type declarations =========
   // Given
