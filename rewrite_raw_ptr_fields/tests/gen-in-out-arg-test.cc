@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file tests generation of output for --field-filter-file and therefore
-// the expectations file (in-out-arg-expected.txt) needs to be compared against
-// the raw output of the rewriter (rather than against the actual edits result).
-// This makes the test incompatible with other tests, which require passing
-// --apply-edits switch to test_tool.py and so to disable the test it is named
-// *-test.cc rather than *-original.cc.
+// This file (and other gen-*-test.cc files) tests generation of output for
+// --field-filter-file and therefore the expectations file
+// (gen-in-out-arg-expected.txt) needs to be compared against the raw output of
+// the rewriter (rather than against the actual edits result).  This makes the
+// test incompatible with other tests, which require passing --apply-edits
+// switch to test_tool.py and so to disable the test it is named *-test.cc
+// rather than *-original.cc.
 //
-// To enable and run the test:
-// 1. Rename this file to in-out-arg-original.cc
-// 2. Run:
-//    $ tools/clang/scripts/test_tool.py rewrite_raw_ptr_fields \
-//         --test-filter=in-out-arg
+// To run the test use tools/clang/rewrite_raw_ptr_fields/tests/run_all_tests.py
 
 namespace my_namespace {
 
