@@ -187,6 +187,9 @@ def parse_args(args):
   ap.add_argument('--gomacc', help='path to gomacc.')
   ap.add_argument('--jobs', '-j', help='maximum number of concurrent jobs.')
   ap.add_argument('--no-gomacc', action='store_true', help='do not use gomacc.')
+  ap.add_argument('--allowlist',
+                  action='store_true',
+                  help='act as if the target is on the allow list.')
   try:
     splitpos = args.index('--')
   except:
@@ -641,7 +644,7 @@ class GomaLinkBase(object):
     # Currently, we don't detect this situation. We could, but it might
     # be better to instead move this logic out of this script and into
     # the build system.
-    use_common_objects = basename not in self.ALLOWLIST
+    use_common_objects = not (args.allowlist or basename in self.ALLOWLIST)
     common_dir = 'common_objs'
     gen_dir = 'lto.' + basename
     params = self.analyze_args(args, gen_dir, common_dir, use_common_objects)
