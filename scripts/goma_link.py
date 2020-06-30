@@ -596,13 +596,15 @@ class GomaLinkBase(object):
       for tup in params.codegen:
         obj, bitcode, index = tup
         stamp = obj + '.stamp'
-        native_link_deps.append(stamp)
+        native_link_deps.append(obj)
         f.write(
             ('\nbuild %s : codegen %s %s\n'
              '  bitcode = %s\n'
              '  index = %s\n'
-             '  native = %s\n') %
-            tuple(map(ninjaenc, (stamp, bitcode, index, bitcode, index, obj))))
+             '  native = %s\n'
+             '\nbuild %s : phony %s\n') % tuple(
+                 map(ninjaenc,
+                     (stamp, bitcode, index, bitcode, index, obj, obj, stamp))))
 
       f.write(('\nbuild %s : native-link %s\n'
                '  rspname = %s\n  params = %s\n') %
