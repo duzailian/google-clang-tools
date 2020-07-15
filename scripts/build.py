@@ -414,7 +414,7 @@ def main():
     old_lib_dir = os.path.join(LLVM_BUILD_DIR, 'lib', 'clang', '11.0.0')
     if (os.path.isdir(old_lib_dir)):
       print('Removing old lib dir: ' + old_lib_dir)
-      RmTree(old_lib_dir
+      RmTree(old_lib_dir)
 
   if args.pgo and not args.bootstrap:
     print('--pgo requires --bootstrap')
